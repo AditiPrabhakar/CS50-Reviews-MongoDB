@@ -57,24 +57,24 @@
         <!-- Profile Modal -->
         <div class="modal fade profile_modal" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
             <div class="modal-dialog">
-                <div class="modal-content" style="background-image: linear-gradient(0deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.9)), url('https://i.pinimg.com/originals/e1/4f/82/e14f8230de342d30cee8099737994f7c.jpg'); background-size: cover; background-position: center;">
-                    <div class="modal-header">
-                        <h5 class="modal-title pm_title" id="profileModalLabel">@{{ profile.username }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <h6 class="modal_username">Check out your stats!</h6>
-                        <div class="my_review_box modal_votes" style="display:flex; align-items:center;">
-
-                                <p style="font-size: 1.3rem; margin-top: 20px;"><strong>Total Upvotes</strong><span style="color: green; margin-left:22px">{{ profile.total_upvotes }}</span></p>
-                                <p style="font-size: 1.3rem;"><strong>Total Downvotes</strong><span style="color: red">{{ profile.total_downvotes }}</span></p>
-                            <!-- <br> -->
-                            <p style="text-align: center; width: 100%; font-size: 1.5rem; "><strong>Total Reviews</strong><span
-                                      style="margin-left: 4px; border: 1px solid gray; padding: 5px; border-radius: 10px;">{{ profile.reviews_count
-                                      }}</span></p>
-                            <br>
-                            <p style="font-family: 'Cabin', serif; font-weight: 500;">~Thanks for the vibe, your thoughts help us thrive!</p>
+                <div class="modal-content" style="background-image: linear-gradient(0deg, rgba(6, 5, 17, 0.9), rgba(2, 3, 8, 0.7)), url('https://i.pinimg.com/originals/e1/4f/82/e14f8230de342d30cee8099737994f7c.jpg'); background-size: cover; background-position: center;">  
+                    <h5 class="modal-title pm_title mt-4" id="profileModalLabel">CS50</h5>
+                    <div class="avatar mx-auto mt-2" data-label={{ profile.firstLetter }}></div>
+                    <div class="mx-auto mt-1" style="font-size: xx-large; font-weight: 800;">{{ profile.username }}</div>
+                    <div class="dash_box mt-5">
+                        <div class="dash_boxes">
+                            <span>Total Reviews</span>
+                            <p>{{ profile.reviews_count }}</p>
                         </div>
+                        <div class="dash_boxes">
+                            <span>Total Upvotes</span>
+                            <p style="color: rgb(35, 209, 35);">{{ profile.total_upvotes }}</p>
+                        </div>
+                        <div class="dash_boxes">
+                            <span>Total Downvotes</span>
+                            <p style="color: rgb(243, 72, 72);">{{ profile.total_downvotes }}</p>
+                        </div>
+                    </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Close</button>
                     </div>

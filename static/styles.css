@@ -170,7 +170,7 @@
 
 .show_reviews {
     /* background-image: linear-gradient(0deg, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.4)), url('https://pbs.twimg.com/media/GYfYA6vXIAAykUC.jpg'); */
-    background-image: linear-gradient(0deg, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.4)), url('https://cs50.harvard.edu/x/2024/assets/sanders.jpg');
+    background-image: linear-gradient(0deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.2)), url('https://cs50.harvard.edu/x/2024/assets/sanders.jpg');
     background-size: cover;
     background-position: center;
     background-repeat:no-repeat;
@@ -210,6 +210,7 @@
     /* background: linear-gradient(0deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.4)); */
     background: linear-gradient(0deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8));
     border: 1px solid gray;
+    border-radius: 10px;
 }
 
 .comments_box > span {
@@ -234,10 +235,10 @@
 }
 
 .vote_count {
-    border: 0.5px solid gray;
+    /* border: 0.5px solid gray; */
     padding:5px;
     font-size: 1rem;
-    border-radius: 5px;
+    /* border-radius: 10px; */
 }
 
 .single_item {
@@ -322,3 +323,106 @@ a {
 .login_signup > h1 {
     color: white;
 }
+
+.avatar {
+    font-size: 40px;
+    width: 3em;
+    height: 3em;
+    border-radius: 50%;
+    background-color: rgba(165, 28, 48, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.avatar::after {
+    content: attr(data-label);
+    font-family: "PT Sans", serif;
+    font-weight: bolder;
+}
+
+.dash_box {
+    /* font-size: 30px; */
+    display: flex;
+    flex-direction: row;
+    justify-content:space-evenly;
+    margin-top: 10px;
+    margin-bottom: 30px;
+}
+
+.dash_boxes {
+    font-family: "PT Sans", serif;
+    /* background-color: rgb(42, 39, 87); */
+    background-image: linear-gradient(0deg, rgb(13, 23, 43), rgb(21, 14, 49));
+    width: 9em;
+    height: 6em;
+    border-radius: 10px;
+    border: 1px solid rgb(146, 143, 143);
+}
+.modal {
+    --bs-modal-border-radius: 30px;
+  }
+
+.modal-content{
+    border:rgb(224, 209, 209) 2px solid; 
+}
+
+.dash_boxes > span {
+    /* text-align: center; */
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgb(160, 157, 157);
+}
+
+.dash_boxes > p {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bolder;
+    font-size: xx-large;
+}
+
+@keyframes pulseUpvote {
+    0% {
+      transform: scale(1);
+      color: green;
+    }
+    50% {
+      transform: scale(1.3);
+      color: #00cc66;
+    }
+    100% {
+      transform: scale(1);
+      color: green;
+    }
+  }
+  
+  @keyframes pulseDownvote {
+    0% {
+      transform: scale(1);
+      color: red;
+    }
+    50% {
+      transform: scale(1.3);
+      color: #ff4d4d;
+    }
+    100% {
+      transform: scale(1);
+      color: red;
+    }
+  }
+  
+  .pulse-up {
+    animation: pulseUpvote 0.4s ease;
+  }
+  
+  .pulse-down {
+    animation: pulseDownvote 0.4s ease;
+  }
+  
+  .vote_count {
+    transition: all 0.3s ease;
+  }
+  

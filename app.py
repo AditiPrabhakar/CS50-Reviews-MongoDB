@@ -1,4 +1,4 @@
-from cs50 import SQL
+# from cs50 import SQL
 from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
@@ -24,6 +24,8 @@ db = client['cs50_reviews']
 users = db['users']
 reviews = db['reviews']
 votes = db['votes']
+
+# votes.create_index([("user_id", 1), ("review_id", 1)], unique=True)
 
 # db = SQL("sqlite:///reviews.db")
 
@@ -64,6 +66,7 @@ def home():
             "reviews_count": user.get("reviews_count", 0),
             "total_upvotes": user.get("total_upvotes", 0),
             "total_downvotes": user.get("total_downvotes", 0),
+            "firstLetter": user.get("username")[0].capitalize(),
         }
     else:
         profile_data = {
@@ -71,6 +74,7 @@ def home():
             "reviews_count": 0,
             "total_upvotes": 0,
             "total_downvotes": 0,
+            "firstLetter": "?",
         }
 
     # Pass the profile data to the template
@@ -82,19 +86,18 @@ def home():
 @login_required
 def post_review():
     user = users.find_one({"_id": ObjectId(session.get('user_id'))})
+
+    if not user:
+        return render_template("failure.html", error=400, message="User not found.")
     
+    username = user.get("username")
+    reviews_count = user.get("reviews_count", 0)
+
     if request.method == "POST":
-        review = request.form.get("review")
+        review = request.form.get("review") 
 
         if not review:
             return render_template("failure.html", error=400, message="Both fields are required.")
-
-
-        if not user:
-            return render_template("failure.html", error=400, message="Kindly enter your correct username.")
-
-        username = user.get("username")
-        reviews_count = user.get("reviews_count", 0)
 
         reviews.insert_one({
             "user_id": ObjectId(session.get('user_id')),
@@ -115,77 +118,98 @@ def post_review():
 @app.route("/showReviews", methods=["GET", "POST"])
 @login_required
 def show_reviews():
-    if request.method == "POST":
-        # Get the form data
-        review_id = request.form.get("review_id")
-        vote_type = request.form.get("vote_type")
+    user_id = ObjectId(session['user_id'])
+    all_reviews = list(reviews.find())
+    user_votes = votes.find({"user_id": user_id})
+    vote_map = {str(v['review_id']): v['vote_type'] for v in user_votes}
 
-        # Get user_id from session
-        user_id = session["user_id"]
+    reviews_list = []
 
-        # Check if review exists
-        review = db.execute("SELECT * FROM reviews WHERE id = ?", review_id)
-        if not review:
-            return redirect("/showReviews")
+    for review in all_reviews:
+        user = users.find_one({"_id": review["user_id"]})
+        review_id_str = str(review["_id"])
 
-        review = review[0]  # Since db.execute returns a list
+        reviews_list.append({
+            "id": review_id_str,
+            "username": review["username"],
+            "review": review["review"],
+            "upvotes": review.get("upvotes", 0),
+            "downvotes": review.get("downvotes", 0),
+            "total_upvotes": user.get("total_upvotes") if user else 0,
+            "total_downvotes": user.get("total_downvotes") if user else 0,
+            "upvoted": vote_map.get(review_id_str) == "upvote",
+            "downvoted": vote_map.get(review_id_str) == "downvote",
+        })
 
-        # Check if user already voted on this review
-        existing_vote = db.execute(
-            "SELECT * FROM votes WHERE user_id = ? AND review_id = ?", user_id, review_id
-        )
+    return render_template('showreviews.html', reviews=reviews_list)
 
-        if existing_vote:
-            # If user already voted, handle changing vote
-            if existing_vote[0]["vote_type"] != vote_type:
-                # Update the votes based on new vote type
-                if vote_type == "upvote":
-                    # Update review upvotes and downvotes
-                    db.execute(
-                        "UPDATE reviews SET upvotes = upvotes + 1, downvotes = downvotes - 1 WHERE id = ?", review_id)
-                    # Update user total votes
-                    db.execute(
-                        "UPDATE users SET total_upvotes = total_upvotes + 1, total_downvotes = total_downvotes - 1 WHERE id = ?", review["user_id"])
-                elif vote_type == "downvote":
-                    db.execute(
-                        "UPDATE reviews SET upvotes = upvotes - 1, downvotes = downvotes + 1 WHERE id = ?", review_id)
-                    db.execute(
-                        "UPDATE users SET total_upvotes = total_upvotes - 1, total_downvotes = total_downvotes + 1 WHERE id = ?", review["user_id"])
+@app.route('/vote', methods=['POST'])
+@login_required
+def vote():
+    data = request.get_json()
+    review_id = data.get("review_id")
+    vote_type = data.get("vote_type")
+    user_id = ObjectId(session['user_id'])
 
-                # Update the vote type in the votes table
-                db.execute("UPDATE votes SET vote_type = ? WHERE user_id = ? AND review_id = ?",
-                           vote_type, user_id, review_id)
+    try:
+        review_obj_id = ObjectId(review_id)
+    except:
+        return jsonify({"success": False}), 400
+
+    review = reviews.find_one({"_id": review_obj_id})
+    if not review:
+        return jsonify({"success": False}), 404
+
+    existing_vote = votes.find_one({"user_id": user_id, "review_id": review_obj_id})
+    author_id = review['user_id']
+
+    if existing_vote:
+        if existing_vote['vote_type'] == vote_type:
+            # Clicking same button again = remove vote
+            if vote_type == 'upvote':
+                reviews.update_one({"_id": review_obj_id}, {"$inc": {"upvotes": -1}})
+                users.update_one({"_id": author_id}, {"$inc": {"total_upvotes": -1}})
+            else:
+                reviews.update_one({"_id": review_obj_id}, {"$inc": {"downvotes": -1}})
+                users.update_one({"_id": author_id}, {"$inc": {"total_downvotes": -1}})
+
+            votes.delete_one({"_id": existing_vote['_id']})
+            current_vote = None
         else:
-            # If the user has not voted before, insert their vote
-            if vote_type == "upvote":
-                db.execute(
-                    "UPDATE reviews SET upvotes = upvotes + 1 WHERE id = ?", review_id)
-                db.execute(
-                    "UPDATE users SET total_upvotes = total_upvotes + 1 WHERE id = ?", review["user_id"])
-            elif vote_type == "downvote":
-                db.execute(
-                    "UPDATE reviews SET downvotes = downvotes + 1 WHERE id = ?", review_id)
-                db.execute(
-                    "UPDATE users SET total_downvotes = total_downvotes + 1 WHERE id = ?", review["user_id"])
+            # Switching vote
+            if vote_type == 'upvote':
+                reviews.update_one({"_id": review_obj_id}, {"$inc": {"upvotes": 1, "downvotes": -1}})
+                users.update_one({"_id": author_id}, {"$inc": {"total_upvotes": 1, "total_downvotes": -1}})
+            else:
+                reviews.update_one({"_id": review_obj_id}, {"$inc": {"upvotes": -1, "downvotes": 1}})
+                users.update_one({"_id": author_id}, {"$inc": {"total_upvotes": -1, "total_downvotes": 1}})
 
-            # Insert the new vote into the votes table
-            db.execute("INSERT INTO votes (user_id, review_id, vote_type) VALUES (?, ?, ?)",
-                       user_id, review_id, vote_type)
+            votes.update_one({"_id": existing_vote['_id']}, {"$set": {"vote_type": vote_type}})
+            current_vote = vote_type
+    else:
+        # New vote
+        if vote_type == "upvote":
+            reviews.update_one({"_id": review_obj_id}, {"$inc": {"upvotes": 1}})
+            users.update_one({"_id": author_id}, {"$inc": {"total_upvotes": 1}})
+        else:
+            reviews.update_one({"_id": review_obj_id}, {"$inc": {"downvotes": 1}})
+            users.update_one({"_id": author_id}, {"$inc": {"total_downvotes": 1}})
 
-        return redirect("/showReviews")
+        votes.insert_one({
+            "user_id": user_id,
+            "review_id": review_obj_id,
+            "vote_type": vote_type,
+        })
+        current_vote = vote_type
 
-    # For GET request, fetch all reviews along with the user's upvote/downvote status
-    reviews = db.execute(
-        "SELECT reviews.id, reviews.username, reviews.review, reviews.upvotes, reviews.downvotes, users.total_upvotes, users.total_downvotes, "
-        "CASE WHEN EXISTS (SELECT 1 FROM votes WHERE user_id = ? AND review_id = reviews.id AND vote_type = 'upvote') THEN 1 ELSE 0 END AS voted_up, "
-        "CASE WHEN EXISTS (SELECT 1 FROM votes WHERE user_id = ? AND review_id = reviews.id AND vote_type = 'downvote') THEN 1 ELSE 0 END AS voted_down "
-        "FROM reviews JOIN users ON reviews.user_id = users.id",
-        session["user_id"], session["user_id"]
-    )
+    updated_review = reviews.find_one({"_id": review_obj_id})
 
-    return render_template("showreviews.html", reviews=reviews)
-
-
+    return jsonify({
+        "success": True,
+        "upvotes": updated_review.get("upvotes", 0),
+        "downvotes": updated_review.get("downvotes", 0),
+        "current_vote": current_vote  # can be "upvote", "downvote", or None
+    })
 
 @app.route("/faqs")
 @login_required
@@ -271,3 +295,5 @@ def logout():
     # Redirect user to login form
     return redirect("/")
 
+if __name__ == "__main__":
+    app.run(debug=True)
